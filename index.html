@@ -27,17 +27,21 @@
     <script>
         let leftHandX = null;
         let leftHandY = null;
+        let leftThumbX = null; // Added for left hand zoom
+        let leftThumbY = null; // Added for left hand zoom
         let rightHandX = null;
         let rightHandY = null;
         let rightThumbX = null;
         let rightThumbY = null;
         let smoothLeftX = 0;
         let smoothLeftY = 0;
+        let smoothLeftThumbX = 0; // Added for smoothing
+        let smoothLeftThumbY = 0; // Added for smoothing
         let smoothRightX = 0;
         let smoothRightY = 0;
         let smoothRightThumbX = 0;
         let smoothRightThumbY = 0;
-        const smoothing = 0.9; // Stronger smoothing (was 0.6)
+        const smoothing = 0.9;
         let lastLeftDetection = 0;
         let lastRightDetection = 0;
         const detectionTimeout = 500;
@@ -105,17 +109,23 @@
             background(10, 15, 20);
 
             // Smoother tracking with stronger lerp
-            if (leftHandX !== null) smoothLeftX = lerp(smoothLeftX, leftHandX, 1 - smoothing); // 0.1
+            if (leftHandX !== null) smoothLeftX = lerp(smoothLeftX, leftHandX, 1 - smoothing);
             if (leftHandY !== null) smoothLeftY = lerp(smoothLeftY, leftHandY, 1 - smoothing);
+            if (leftThumbX !== null) smoothLeftThumbX = lerp(smoothLeftThumbX, leftThumbX, 1 - smoothing); // Added
+            if (leftThumbY !== null) smoothLeftThumbY = lerp(smoothLeftThumbY, leftThumbY, 1 - smoothing); // Added
             if (rightHandX !== null) smoothRightX = lerp(smoothRightX, rightHandX, 1 - smoothing);
             if (rightHandY !== null) smoothRightY = lerp(smoothRightY, rightHandY, 1 - smoothing);
             if (rightThumbX !== null) smoothRightThumbX = lerp(smoothRightThumbX, rightThumbX, 1 - smoothing);
             if (rightThumbY !== null) smoothRightThumbY = lerp(smoothRightThumbY, rightThumbY, 1 - smoothing);
 
-            // Zoom with right hand
-            if (rightHandX !== null && rightThumbX !== null && Date.now() - lastRightDetection < detectionTimeout) {
+            // Zoom with left hand (2.5x larger range) or right hand
+            if (leftHandX !== null && leftThumbX !== null && Date.now() - lastLeftDetection < detectionTimeout) {
+                let dist = Math.sqrt(Math.pow(smoothLeftX - smoothLeftThumbX, 2) + Math.pow(smoothLeftY - smoothLeftThumbY, 2));
+                zoomLevel = map(dist, 20, 200, 0.5, 5); // Max zoom increased from 2 to 5 (2 * 2.5)
+                zoomLevel = constrain(zoomLevel, 0.5, 5);
+            } else if (rightHandX !== null && rightThumbX !== null && Date.now() - lastRightDetection < detectionTimeout) {
                 let dist = Math.sqrt(Math.pow(smoothRightX - smoothRightThumbX, 2) + Math.pow(smoothRightY - smoothRightThumbY, 2));
-                zoomLevel = map(dist, 20, 200, 0.5, 2);
+                zoomLevel = map(dist, 20, 200, 0.5, 2); // Right hand keeps original range
                 zoomLevel = constrain(zoomLevel, 0.5, 2);
             }
 
@@ -124,7 +134,7 @@
                 if (Date.now() - lastLeftDetection < detectionTimeout) {
                     p.warp(smoothLeftX, smoothLeftY);
                 } else {
-                    p.warp(null, null); // Instant reset to original position
+                    p.warp(null, null);
                 }
                 p.display();
             }
@@ -145,6 +155,8 @@
         hands.onResults((results) => {
             leftHandX = null;
             leftHandY = null;
+            leftThumbX = null; // Added
+            leftThumbY = null; // Added
             rightHandX = null;
             rightHandY = null;
             rightThumbX = null;
@@ -166,6 +178,8 @@
                         if (handedness.label === "Left") {
                             leftHandX = x;
                             leftHandY = y;
+                            leftThumbX = thumbX; // Added
+                            leftThumbY = thumbY; // Added
                             lastLeftDetection = Date.now();
                         } else if (handedness.label === "Right") {
                             rightHandX = x;
